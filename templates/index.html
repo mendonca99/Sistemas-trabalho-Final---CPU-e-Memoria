@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de CPU e Memória</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Monitor de CPU e Memória</h1>
+    
+    <canvas id="cpuChart"></canvas>
+    <canvas id="memoryChart"></canvas>
+
+    <script>
+        const socket = io("http://127.0.0.1:5000");
+
+        // Configuração dos gráficos
+        const ctxCpu = document.getElementById("cpuChart").getContext("2d");
+        const ctxMemory = document.getElementById("memoryChart").getContext("2d");
+
+        const cpuChart = new Chart(ctxCpu, {
+            type: "line",
+            data: { labels: [], datasets: [{ label: "CPU (%)", data: [], borderColor: "red", borderWidth: 2 }] },
+            options: { scales: { y: { min: 0, max: 100 } } }
+        });
+
+        const memoryChart = new Chart(ctxMemory, {
+            type: "line",
+            data: { labels: [], datasets: [{ label: "Memória (%)", data: [], borderColor: "blue", borderWidth: 2 }] },
+            options: { scales: { y: { min: 0, max: 100 } } }
+        });
+
+        // Atualiza os gráficos quando o servidor envia novos dados
+        socket.on("update", function(data) {
+            console.log("Dados recebidos:", data); // DEBUG: Verificar se os dados chegam
+
+            const time = new Date().toLocaleTimeString();
+            
+            if (cpuChart.data.labels.length > 20) {
+                cpuChart.data.labels.shift();
+                cpuChart.data.datasets[0].data.shift();
+                memoryChart.data.labels.shift();
+                memoryChart.data.datasets[0].data.shift();
+            }
+
+            cpuChart.data.labels.push(time);
+            cpuChart.data.datasets[0].data.push(data.cpu);
+            memoryChart.data.labels.push(time);
+            memoryChart.data.datasets[0].data.push(data.memory);
+
+            cpuChart.update();
+            memoryChart.update();
+        });
+
+        socket.on("connect", function() {
+            console.log("Conectado ao servidor WebSocket!");
+        });
+
+        socket.on("disconnect", function() {
+            console.log("Desconectado do servidor WebSocket!");
+        });
+    </script>
+</body>
+</html>
